@@ -8,7 +8,7 @@ import org.routing.software.jpos.IdentifiableEntity;
 @Builder
 @Getter
 @Setter
-public class Truck implements IdentifiableEntity {
+public class Truck {
 
     private int id;
 

@@ -33,6 +33,7 @@ public class MultiSchedulingGenerator {
     Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading = new HashMap<>();
     private int NUMBER_OF_LOADING_SPOTS = 2;
     private Solution solution = new Solution();
+    List<Assignment> tempSolutionList = new ArrayList<>(); //A list of temp solutions to compare the results
 
     //Phase 2 from the current assignment pool we start by creating
     //Based on the number of the assignments (we suppose that from phase 1 the demand is
@@ -96,9 +97,9 @@ public class MultiSchedulingGenerator {
         } else if (operationType.equals(OperationType.MWR)) {
             //execute MWR
         } else if (operationType.equals(OperationType.LPT)) {
-            //execute LPT
+            LPTHandle();
         } else if (operationType.equals(OperationType.SPT)) {
-            //execute SPT
+            SPTHandle();
         }
 
         return new Assignment(); //TODO REMOVE
@@ -107,7 +108,6 @@ public class MultiSchedulingGenerator {
 
     public void routeCreationBasedOnAssignmentList(List<Assignment> assignments) {
         long freeTimeslotInSource = 0;
-        long assignementCompleteTimeslot = 0;
         initializeLoadingSpotsOnSource();
 
         //for each assignment as ordered in list start placing
@@ -115,7 +115,7 @@ public class MultiSchedulingGenerator {
 
             Assignment assignment = assignments.get(0);
             Truck pickedTruck = assignment.getTruck();
-            LocationNode locationNode = assignment.getLocationNode();
+            LocationNode locationNode = assignment.getLocationNodeList().get(0); //In case of Multi scheduling generator, only one assignment per Trck is allowed
             Map<Long, Map<Long, List<Long>>> truckDistanceMatrices =
                     planToSolve.getTruckDistanceMatrices();
             Map<Long, List<Long>> truckDistanceMatrix = truckDistanceMatrices.get(pickedTruck.getId());
@@ -137,27 +137,28 @@ public class MultiSchedulingGenerator {
 
             long timeslotThatItWillBeBackToSource = timeslotThatWillActuallyLoad + pickedTruck.getConvertedUnloadingTime() + travelTimeToNode;
 
-            //We assume a single source location node. HOWEVER, one single source can have multiple unloading points.
-            freeTimeslotInSource = findFreeTimeslotInSource(this.sourceTimeslotsThatAreOccupatedDueToLoading);
-            //now we must check also if it could load or not in source location mode, due to loading of another truck
-            //is a spot free in source
-            assignementCompleteTimeslot = Math.max(freeTimeslotInSource, timeslotThatItWillBeBackToSource);
+            int timeslotThatCanLoadOnSource = (int)(timeslotThatItWillBeBackToSource + pickedTruck.getConvertedUnloadingTime());
+            List<Integer> timeslotOccupiedThatCanLoadOnSource = findTruckOperationOccupiedTimeslots(pickedTruck, timeslotThatCanLoadOnSource);
 
+            Map<Integer, Integer> freeTimeslotAndSpotInSource
+                    = findFreeTimeslotInSourceRevised(timeslotOccupiedThatCanLoadOnSource, this.sourceTimeslotsThatAreOccupatedDueToLoading);
 
-            Map<Integer, List<Integer>> truckLoadingTimeslot = new HashMap<>();
-            truckLoadingTimeslot.computeIfAbsent(pickedTruck.getId(), k -> new ArrayList<>())
-                    .add(assignementCompleteTimeslot);
+            //Populate the relative fields on the Assignment based on the above results
+            //get the associated spot
+            assignment.setSourceLoadingSpot(freeTimeslotAndSpotInSource.entrySet()
+                            .stream()
+                            .map(Map.Entry::getKey).toList().get(0));
+            //get the associated timeslot
 
+            assignment.setSourceLoadingTimeslot(freeTimeslotAndSpotInSource.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0));
 
-
-            //TODO  check how is going to be implemented with operation type. maybe void return is not the best,
-            // maybe its best to return when the truck is ready to load in depot(keep in mind delay in depot and also multiple depots)
-            //and based on this return th timeslot based on the assignments provided.ie in the currently assigned assignments
-            //each unsigned assignment from pool is selected and added and calculate and get the best result based on operation type
-            //objective.
+            //The info we need have stored on Assignment Object
+            //Now we want to store this assignment object in a temp solution in order to compare with other
+            //solution and keep the one that fits best based on a certain criterion.
+            tempSolutionList.add(assignment);
         }
-
-
 
     }
 
@@ -258,41 +259,34 @@ public class MultiSchedulingGenerator {
     }
 
     /**
-     * The source location node can have multiple unloading spots. ie multiple trucks CAN load at the same source (depot)
-     * location node at the same time. The function checks and finds the most available (i.e nearest to 0) but also
-     * larger than the current ALL occupied timeslots in list. i.e the UNLOADING_SPOTS refer to the SAME source location node.
-     * KEEP IN MIND it is meant to be loading TILL each last timeslot. No intervals allowed (see relative test no3)
+     * We will use the same function as the unloading process for each spot
+     * @return
      */
-    public int findFreeTimeslotInSource(Map<Integer, List<Integer>> sourceTimeslotsThatAreOccupatedDueToLoading) {
-        //we iterate through all spots and get their last timeslot
-        //then from the stuff we get we take the smaller
-        int freeTimeslot = 0;
+    public Map<Integer, Integer> findFreeTimeslotInSourceRevised(List<Integer> timeslotsThatCanLoadOnSource, Map<Integer, List<Integer>> sourceTimeslotsThatAreOccupatedDueToLoading) {
+        int minTimeslot = Integer.MAX_VALUE;
+        int selectedSpot = 0;
+        NUMBER_OF_LOADING_SPOTS = sourceTimeslotsThatAreOccupatedDueToLoading.size(); //todo remove
+        Map<Integer, Integer> freeTimeslotAndSpotInSource = new HashMap<>();
+
         for (int spot = 0; spot < NUMBER_OF_LOADING_SPOTS; spot++) {
-            //check empty
-            List<Integer> sourceTimeslotsForSpotList;
-            spot++;
-            Integer maxSourceTimeslotsForSpotList;
-            int finalSpot = spot;
-            sourceTimeslotsForSpotList =
-                    sourceTimeslotsThatAreOccupatedDueToLoading
-                            .entrySet()
-                            .stream()
-                            .filter(c -> c.getKey().equals(finalSpot))
-                            .flatMap(p -> p.getValue().stream()).toList();
 
-            maxSourceTimeslotsForSpotList = sourceTimeslotsForSpotList.get(sourceTimeslotsForSpotList.size() - 1);
-            if (freeTimeslot < maxSourceTimeslotsForSpotList) {
-                freeTimeslot = maxSourceTimeslotsForSpotList;
+            List<Integer> occupiedLoadingTimeslotsForSpot = sourceTimeslotsThatAreOccupatedDueToLoading.get(spot + 1);
+            long timeslotThatStartLoadingOnSpot =
+                    defineTimeslotThatWillActuallyUnload(timeslotsThatCanLoadOnSource, occupiedLoadingTimeslotsForSpot);
 
-                //populate the relative set
-                sourceTimeslotsThatAreOccupatedDueToLoading
-                        .computeIfAbsent(spot, k -> new ArrayList<>())
-                        .add(freeTimeslot);
+            if (minTimeslot > timeslotThatStartLoadingOnSpot) {
+                minTimeslot = (int)timeslotThatStartLoadingOnSpot;
+                selectedSpot = spot + 1;
+                freeTimeslotAndSpotInSource.put(selectedSpot, minTimeslot);
+            }
+            //populate the sourceTimeslotsThatAreOccupationDueToLoading on the certain spot
+            for (int i = 0; i < timeslotsThatCanLoadOnSource.size(); i++) {
+                sourceTimeslotsThatAreOccupatedDueToLoading.get(selectedSpot).add(i + 1);
             }
         }
-        return freeTimeslot + 1;
+        return freeTimeslotAndSpotInSource;
+        }
 
-    }
 
     /**
      *  Initialize the arraylists for each unloading spot
@@ -303,6 +297,69 @@ public class MultiSchedulingGenerator {
             List<Integer> spotList = new ArrayList<>();
             sourceTimeslotsThatAreOccupatedDueToLoading.put(spotId, spotList);
         }
+    }
+
+    /**
+     * Provide the truck and the starting timeslot and return a list of the occupied timeslots
+     */
+    public List<Integer> findTruckOperationOccupiedTimeslots(Truck truck, int startingOperationTimeslot) {
+        List<Integer> timeslotOccupiedThatCanLoadOnSource = new ArrayList<>();
+        for (int o = 0; o < truck.getConvertedUnloadingTime(); o++) {
+            timeslotOccupiedThatCanLoadOnSource.add(startingOperationTimeslot + o + 1);
+        }
+        return timeslotOccupiedThatCanLoadOnSource;
+    }
+
+    /**
+     * This function takes a candidate list of assignments (tempSolutionList) - (with populated relative fields ,ie each of one has been populated
+     * using routeCreationBasedOnAssignmentList method) and selects the best based on Shortest Processing Time.
+     * IMPORTANT -> we suppose that the processing time, is defined as the time that the truck starts loading till the time that the
+     * the truck is available for loading again in source.
+     */
+    private void SPTHandle() {
+        int availableTimeslot = findTimeslotWhichIsFreeBasedOnCurrentAssignmentPool();
+
+        int min = Integer.MAX_VALUE;
+        Assignment pickedAssignment = new Assignment();
+
+        for (Assignment assignment : tempSolutionList) {
+                if (assignment.getSourceLoadingTimeslot() < min) {
+                    pickedAssignment = assignment;
+                    min = assignment.getSourceLoadingTimeslot();
+                }
+        }
+        remainingAssignmentPool.remove(pickedAssignment);
+        currentAssignmentPool.add(pickedAssignment);
+    }
+
+    /**
+     * This function takes a candidate list of assignments (tempSolutionList) - (with populated relative fields ,ie each of one has been populated
+     * using routeCreationBasedOnAssignmentList method) and selects the best based on Longest Processing Time.
+     * IMPORTANT -> we suppose that the processing time, is defined as the time that the truck starts loading till the time that the
+     * the truck is available for loading again in source.
+     */
+    private void LPTHandle() {
+        int availableTimeslot = findTimeslotWhichIsFreeBasedOnCurrentAssignmentPool();
+
+        int max = 0;
+        Assignment pickedAssignment = new Assignment();
+
+        for (Assignment assignment : tempSolutionList) {
+            if (assignment.getSourceLoadingTimeslot() > max) {
+                pickedAssignment = assignment;
+                max = assignment.getSourceLoadingTimeslot();
+            }
+        }
+        remainingAssignmentPool.remove(pickedAssignment);
+        currentAssignmentPool.add(pickedAssignment);
+    }
+
+    private int findTimeslotWhichIsFreeBasedOnCurrentAssignmentPool() {
+        //find the last assignment
+        int lastIndex = (remainingAssignmentPool.size() - 1);
+        Assignment assignment = remainingAssignmentPool.get(lastIndex);
+        return assignment.getSourceLoadingTimeslot() + assignment.getTruck().getConvertedUnloadingTime().intValue();
+
     }
 
 }

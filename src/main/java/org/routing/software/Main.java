@@ -161,7 +161,7 @@ public class Main {
             multiSchedulingGenerator.createInitialChromosomePool();
 
 
-            //<-----Test defineTimeslotThatWillActuallyUnload ----->//
+//            <-----Test defineTimeslotThatWillActuallyUnload ----->//
 
 //            Test the below method: //Expected start unloading timeslot: 1
             List<Integer> truckUnloadingTimeslot = List.of(1,2,3);
@@ -223,9 +223,17 @@ public class Main {
             List<Integer>  listForSpot1 = new ArrayList<>();
             listForSpot1.add(1);
             listForSpot1.add(2);
-            Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading = new HashMap<>();
-            locationNodesTimeslotsThatAreOccupatedDueToUnloading.put(spot1, listForSpot1);
-            int result1 = multiSchedulingGenerator.findFreeTimeslotInSource(locationNodesTimeslotsThatAreOccupatedDueToUnloading);
+            Map<Integer, List<Integer>> sourceTimeslotsThatAreOccupatedDueToLoading = new HashMap<>();
+            sourceTimeslotsThatAreOccupatedDueToLoading.put(spot1, listForSpot1);
+
+            List<Integer> truckPossibleLoadingTimeslots = new ArrayList<>();
+            truckPossibleLoadingTimeslots.add(2);
+
+            Map<Integer, Integer> resultMap1 = multiSchedulingGenerator.findFreeTimeslotInSourceRevised(truckPossibleLoadingTimeslots,
+                    sourceTimeslotsThatAreOccupatedDueToLoading);
+            int result1 = resultMap1.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0);
             System.out.println("Expected result: 3 and Found: " + result1);
 
 
@@ -239,34 +247,125 @@ public class Main {
             listForSpot2.add(6);
             Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading2 = new HashMap<>();
             locationNodesTimeslotsThatAreOccupatedDueToUnloading2.put(spot2, listForSpot2);
-            int result2 = multiSchedulingGenerator.findFreeTimeslotInSource(locationNodesTimeslotsThatAreOccupatedDueToUnloading2);
-            System.out.println("Expected result: 7 and Found: " + result2);
+
+            List<Integer> truckPossibleLoadingTimeslots2 = new ArrayList<>();
+            truckPossibleLoadingTimeslots2.add(3);
+            truckPossibleLoadingTimeslots2.add(4);
+
+
+            Map<Integer, Integer> resultMap2 = multiSchedulingGenerator.findFreeTimeslotInSourceRevised(truckPossibleLoadingTimeslots2, locationNodesTimeslotsThatAreOccupatedDueToUnloading2);
+            int result2 = resultMap2.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0);
+            System.out.println("Expected result: 3 and Found: " + result2);
 
             //<-----Test findFreeTimeslotInSource ----->//
             //Test with One Timeslot
             Integer spot3 = 1;
-            Integer spot4 = 2;
             List<Integer>  listForSpot3 = new ArrayList<>();
-            List<Integer>  listForSpot4 = new ArrayList<>();
             listForSpot3.add(1);
             listForSpot3.add(2);
-            listForSpot4.add(1);
-            listForSpot4.add(5);
+            listForSpot3.add(6);
+            listForSpot3.add(7);
+            listForSpot3.add(8);
             Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading3 = new HashMap<>();
             locationNodesTimeslotsThatAreOccupatedDueToUnloading3.put(spot3, listForSpot3);
-            locationNodesTimeslotsThatAreOccupatedDueToUnloading3.put(spot4, listForSpot4);
-            int result3 = multiSchedulingGenerator.findFreeTimeslotInSource(locationNodesTimeslotsThatAreOccupatedDueToUnloading3);
-            System.out.println("Expected result: 3 and Found: " + result3);
+
+            List<Integer> truckPossibleLoadingTimeslots3 = new ArrayList<>();
+            truckPossibleLoadingTimeslots3.add(4);
+            truckPossibleLoadingTimeslots3.add(5);
+            truckPossibleLoadingTimeslots3.add(6);
+
+            Map<Integer, Integer> resultMap3 = multiSchedulingGenerator.findFreeTimeslotInSourceRevised(truckPossibleLoadingTimeslots3, locationNodesTimeslotsThatAreOccupatedDueToUnloading3);
+            int result3 = resultMap3.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0);
+            System.out.println("Expected result: 9 and Found: " + result3);
 
 
+            //<-----Test findFreeTimeslotInSource ----->//
+            //Test with One Timeslot
+            Integer spot4 = 1;
+            List<Integer>  listForSpot4 = new ArrayList<>();
+            listForSpot4.add(1);
+            listForSpot4.add(2);
+            listForSpot4.add(6);
+            listForSpot4.add(7);
+            listForSpot4.add(8);
+            listForSpot4.add(12);
+            listForSpot4.add(13);
+            Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading4 = new HashMap<>();
+            locationNodesTimeslotsThatAreOccupatedDueToUnloading4.put(spot4, listForSpot4);
+
+            List<Integer> truckPossibleLoadingTimeslots4 = new ArrayList<>();
+            truckPossibleLoadingTimeslots4.add(4);
+            truckPossibleLoadingTimeslots4.add(5);
+            truckPossibleLoadingTimeslots4.add(6);
+            truckPossibleLoadingTimeslots4.add(8);
 
 
+            Map<Integer, Integer> resultMap4 = multiSchedulingGenerator.findFreeTimeslotInSourceRevised(truckPossibleLoadingTimeslots4, locationNodesTimeslotsThatAreOccupatedDueToUnloading4);
+            int result4 = resultMap4.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0);
+            System.out.println("Expected result: 14 and Found: " + result4);
+
+            //<-----Test findFreeTimeslotInSource ----->//
+            //Test with One Timeslot
+            Integer spot5 = 1;
+            List<Integer>  listForSpot5 = new ArrayList<>();
+            listForSpot5.add(1);
+            listForSpot5.add(2);
+            listForSpot5.add(6);
+            listForSpot5.add(7);
+            listForSpot5.add(8);
+            listForSpot5.add(12);
+            listForSpot5.add(13);
+            Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading5 = new HashMap<>();
+            locationNodesTimeslotsThatAreOccupatedDueToUnloading5.put(spot5, listForSpot5);
+
+            List<Integer> truckPossibleLoadingTimeslots5 = new ArrayList<>();
+            truckPossibleLoadingTimeslots5.add(4);
+            truckPossibleLoadingTimeslots5.add(5);
+            truckPossibleLoadingTimeslots5.add(6);
+
+            Map<Integer, Integer> resultMap5 = multiSchedulingGenerator.findFreeTimeslotInSourceRevised(truckPossibleLoadingTimeslots5, locationNodesTimeslotsThatAreOccupatedDueToUnloading5);
+            int result5 = resultMap5.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0);
+            System.out.println("Expected result: 9 and Found: " + result5);
+
+            //<-----Test findFreeTimeslotInSource ----->//
+            //Test with One Timeslot
+            Integer spot31 = 1;
+            Integer spot41 = 2;
+            List<Integer>  listForSpot31 = new ArrayList<>();
+            List<Integer>  listForSpot41 = new ArrayList<>();
+            listForSpot31.add(1);
+            listForSpot31.add(2);
+            listForSpot31.add(4);
+            listForSpot31.add(5);
+            listForSpot31.add(6);
+            listForSpot31.add(9);
+            listForSpot41.add(1);
+            listForSpot41.add(5);
+            listForSpot41.add(8);
+            Map<Integer, List<Integer>> locationNodesTimeslotsThatAreOccupatedDueToUnloading31 = new HashMap<>();
+            locationNodesTimeslotsThatAreOccupatedDueToUnloading31.put(spot31, listForSpot31);
+            locationNodesTimeslotsThatAreOccupatedDueToUnloading31.put(spot41, listForSpot41);
+
+            List<Integer> truckPossibleLoadingTimeslots51 = new ArrayList<>();
+            truckPossibleLoadingTimeslots51.add(4);
+            truckPossibleLoadingTimeslots51.add(5);
+            truckPossibleLoadingTimeslots51.add(6);
 
 
-
-
-
-
+            Map<Integer, Integer> resultMap31 = multiSchedulingGenerator.findFreeTimeslotInSourceRevised(truckPossibleLoadingTimeslots51,
+                    locationNodesTimeslotsThatAreOccupatedDueToUnloading31);
+            int result31 = resultMap31.entrySet()
+                    .stream()
+                    .map(Map.Entry::getValue).toList().get(0);
+            System.out.println("Expected result: 9 and Found: " + result31);
 
 
         } catch (Exception e) {

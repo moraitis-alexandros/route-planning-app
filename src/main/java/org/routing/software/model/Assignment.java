@@ -1,11 +1,10 @@
 package org.routing.software.model;
 
-import jakarta.persistence.*;
+
 import lombok.*;
 import org.routing.software.jpos.IdentifiableEntity;
-import org.routing.software.jpos.LocationNodeJpo;
-import org.routing.software.jpos.PlanJpo;
-import org.routing.software.jpos.TruckJpo;
+import java.util.List;
+
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,8 +17,14 @@ public class Assignment implements IdentifiableEntity {
 
     private Long sequence;
 
-    private LocationNode locationNode;
+    private List<LocationNode> locationNodeList; //Based on the algorithm a Truck may visit multiple location nodes on a certain assignment
 
     private Truck truck;
+
+    private List<Integer> locationNodeListVisitTimeslots; //each Location node will be aligned with a certain visit timeslot
+
+    private Integer sourceLoadingTimeslot;
+
+    private Integer sourceLoadingSpot; //A Truck will load in source, which may have different spots (one or more);
 
 }
