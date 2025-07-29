@@ -56,6 +56,7 @@ public class MultiSchedulingGenerator {
             chromosomePool.add(chromosome);
         }
         Debug.print(chromosomePool);
+        System.out.println();
 
         //also solution should be class that contains assignments
         //also check the abstract plan in order to be decoupled and can print
@@ -248,15 +249,6 @@ public class MultiSchedulingGenerator {
         return truckUnloadTimeslot + truckTotalUnloadingTimeInTimeslots - 1 < occupiedTimeslotForLocationNode;
     }
 
-    private Long getSourceNodeId() {
-       return planToSolve
-               .getLocationNodesList()
-               .stream()
-               .filter(LocationNodeJpo::isSource)
-               .collect(Collectors.toList())
-               .get(0)
-               .getId();
-    }
 
     /**
      * We will use the same function as the unloading process for each spot
@@ -277,6 +269,7 @@ public class MultiSchedulingGenerator {
             if (minTimeslot > timeslotThatStartLoadingOnSpot) {
                 minTimeslot = (int)timeslotThatStartLoadingOnSpot;
                 selectedSpot = spot + 1;
+                freeTimeslotAndSpotInSource = new HashMap<>();
                 freeTimeslotAndSpotInSource.put(selectedSpot, minTimeslot);
             }
             //populate the sourceTimeslotsThatAreOccupationDueToLoading on the certain spot

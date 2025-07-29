@@ -160,9 +160,9 @@ public class Main {
             MultiSchedulingGenerator multiSchedulingGenerator = new MultiSchedulingGenerator();
             multiSchedulingGenerator.createInitialChromosomePool();
 
-
+//
 //            <-----Test defineTimeslotThatWillActuallyUnload ----->//
-
+            System.out.println("----------TESTS----------");
 //            Test the below method: //Expected start unloading timeslot: 1
             List<Integer> truckUnloadingTimeslot = List.of(1,2,3);
             List<Integer> locationNodeUnloadOccupiedNodes = List.of(5,6,7);
