@@ -1,0 +1,122 @@
+package org.routing.software.rest;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import lombok.RequiredArgsConstructor;
+import org.routing.software.authentication.AuthenticationProvider;
+import org.routing.software.authentication.AuthenticationResponseDto;
+import org.routing.software.dtos.UserLoginDto;
+import org.routing.software.dtos.UserReadOnlyDto;
+import org.routing.software.dtos.UserRegisterDto;
+import org.routing.software.exceptions.exceptionCategories.EntityAlreadyExistsException;
+import org.routing.software.exceptions.exceptionCategories.EntityInvalidArgumentException;
+import org.routing.software.exceptions.exceptionCategories.EntityNotFoundException;
+import org.routing.software.security.JwtService;
+import org.routing.software.service.IUserService;
+import org.routing.software.validator.UserRegisterValidator;
+import org.routing.software.validator.ValidatorUtil;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@ApplicationScoped
+@RequiredArgsConstructor(onConstructor = @__(@Inject))
+@Path("/auth")
+public class AuthRestController {
+
+    //TODO
+    private final IUserService userService;
+    /// it belongs to onCOnstructor due to its final - also applies in nonull
+    private final AuthenticationProvider authenticationProvider;
+    /// it belongs to onCOnstructor due to its final - also applies in nonull
+    private final JwtService jwtService; //it belongs to onCOnstructor due to its final - also applies in nonull
+    private final ValidatorUtil validatorUtil;
+    private final UserRegisterValidator userRegisterValidator;
+
+    @POST
+    @Path("/register")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response register(UserRegisterDto userRegisterDto, @Context UriInfo uriInfo) throws EntityInvalidArgumentException, EntityAlreadyExistsException {
+
+        List<String> beanErrors = validatorUtil.validate(userRegisterDto);
+
+        //syntax errors
+        if (!beanErrors.isEmpty()) {
+            throw new EntityInvalidArgumentException("User", String.join(", ", beanErrors)); //the AppExceptionMapper will forward the exception.
+        }
+
+        //logic errors
+        Map<String, String> otherErrors = userRegisterValidator.validateDto(userRegisterDto);
+        if (!otherErrors.isEmpty()) {
+            throw new EntityInvalidArgumentException("User", otherErrors.toString()); //the AppExceptionMapper will forward the exception.
+        }
+
+        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.registerUser(userRegisterDto);
+        if (!userReadOnlyDtoOptional.isPresent()) {
+            throw new EntityAlreadyExistsException("User", "The email provided already exists."); //the AppExceptionMapper will forward the exception.
+        }
+        return Response.created(uriInfo.getAbsolutePathBuilder()
+                        .path(userReadOnlyDtoOptional
+                                .get()
+                                .getUuid()) //we forward the uuid not id for security reasons
+                        .build())
+                .entity(userReadOnlyDtoOptional.get()).build();
+    }
+
+    //Principal is logged in user
+    @POST
+    @Path("/login")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response login(UserLoginDto userLoginDTO, @Context Principal principal) throws EntityNotFoundException {
+
+        boolean isUserValid = authenticationProvider.authenticate(userLoginDTO);
+
+        //check if user exists
+        if (!isUserValid) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        //get user, we already checked that user exists (above).
+        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.getUserByUsername(userLoginDTO.getUsername());
+        String role = userReadOnlyDtoOptional.get().getRole();
+        String token = jwtService.generateToken(userLoginDTO.getUsername(), role);
+        AuthenticationResponseDto responseDTO = new AuthenticationResponseDto(token);
+        return Response.status(Response.Status.OK).entity(responseDTO).build();
+    }
+
+    //Principal is logged in user
+    @GET
+    @Path("/confirmRegistration/{confirmationToken}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response confirm(@PathParam("confirmationToken") String confirmationToken) throws EntityNotFoundException {
+
+        boolean isUserValid = authenticationProvider.confirmRegistration(confirmationToken);
+        jwtService.isTokenValid()
+
+        //check if user exists
+        if (!isUserValid) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        //get user, we already checked that user exists (above).
+        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.getUserByUsername(userLoginDTO.getUsername());
+        String role = userReadOnlyDtoOptional.get().getRole();
+        String token = jwtService.generateToken(userLoginDTO.getUsername(), role);
+        AuthenticationResponseDto responseDTO = new AuthenticationResponseDto(token);
+        return Response.status(Response.Status.OK).entity(responseDTO).build();
+    }
+
+
+
+}
+

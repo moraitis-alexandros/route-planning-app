@@ -1,11 +1,15 @@
 package org.routing.software.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.NoResultException;
+import org.routing.software.exceptions.exceptionCategories.EntityNotFoundException;
+import org.routing.software.exceptions.exceptionCategories.MultipleEntitiesExistException;
 import org.routing.software.jpos.UserJpo;
 import org.routing.software.security.SecUtil;
 
-import java.util.Optional;
+import java.util.*;
 
+@ApplicationScoped
 public class UserDaoImpl extends AbstractDao<UserJpo> implements IUserDao {
 
     @Override
@@ -36,8 +40,8 @@ public class UserDaoImpl extends AbstractDao<UserJpo> implements IUserDao {
     }
 
     @Override
-    public boolean isEmailExists(String username) {
-        String query = "SELECT COUNT(u) FROM UserJpo u WHERE UserJpo.username= :username";
+    public boolean isUserExists(String username) {
+        String query = "SELECT COUNT(u) FROM UserJpo u WHERE u.username= :username";
         try {
             Long count = getEntityManager().createQuery(query, Long.class)
                     .setParameter("username", username)
@@ -47,5 +51,51 @@ public class UserDaoImpl extends AbstractDao<UserJpo> implements IUserDao {
             //TODO LOGGER
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public boolean isUserExistsAndIsActive(String username) {
+        String query = "SELECT COUNT(u) FROM UserJpo u WHERE u.username= :username and u.isActive=:isActive";
+        try {
+            Long count = getEntityManager().createQuery(query, Long.class)
+                    .setParameter("username", username)
+                    .setParameter("isActive", true)
+                    .getSingleResult();
+            return count > 0;
+        } catch (NoResultException e) {
+            //TODO LOGGER
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public UserJpo userConfirmationTokenExists(String registrationConfirmationToken)  {
+        String query = "SELECT u FROM UserJpo u WHERE u.confirmationToken=:token";
+        try {
+            List<UserJpo> userJpoList = new ArrayList<>();
+
+            userJpoList = getEntityManager().createQuery(query, UserJpo.class)
+                    .setParameter("token", registrationConfirmationToken)
+                    .getResultList();
+
+            //The below case is nearly impossible. It means that a token is found but no user exists, which cannot be done
+            //because as soon as the user will be created the token be created too.
+            if (userJpoList.isEmpty()) {
+                throw new EntityNotFoundException("User", "No corresponding user for provided token");
+            }
+
+            //The below case is nearly impossible. It means that a token is found and also multiple users exist.
+            //So this indicates a problem with persistence
+            if (userJpoList.size() > 1) {
+                throw new MultipleEntitiesExistException("User", "Multiple users found for the provided token");
+            }
+
+            return userJpoList.get(0);
+
+        } catch (NoResultException | EntityNotFoundException | MultipleEntitiesExistException  e) {
+            //TODO LOGGER IS IT CORRECT?
+            throw new RuntimeException(e);
+        }
+
     }
 }

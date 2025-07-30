@@ -7,12 +7,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.routing.software.OperationType;
 import org.routing.software.helper.Debug;
-import org.routing.software.jpos.LocationNodeJpo;
 import org.routing.software.model.*;
-import org.routing.software.untils.RandomUtil;
+import org.routing.software.utils.RandomUtil;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @NoArgsConstructor
 @AllArgsConstructor

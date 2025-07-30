@@ -8,7 +8,7 @@ public interface IUserDao extends IGenericDAO<UserJpo> {
 
     Optional<UserJpo> getByUsername(String username);
     boolean isUserValid(String username, String password);
-    boolean isEmailExists(String username); //email is same as username
-
+    boolean isUserExists(String username); //email is same as username
+    boolean isUserExistsAndIsActive(String username);
+    UserJpo userConfirmationTokenExists(String registrationConfirmationToken);
     }
-}

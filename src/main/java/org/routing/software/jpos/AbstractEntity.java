@@ -22,8 +22,9 @@ public abstract class AbstractEntity implements Serializable {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "is_deleted", columnDefinition = "TINYINT(1) DEFAULT 0")
-    private boolean isDeleted;
+    @Column(name = "isActive", columnDefinition = "TINYINT(1) DEFAULT 0") //by default the user registered
+    // for the first time is inactive until it confirm its registration via email
+    private boolean isActive;
 
     @Column(unique = true, updatable = false, nullable = false)
     private String uuid;
