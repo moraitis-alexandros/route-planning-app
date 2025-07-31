@@ -21,16 +21,25 @@ public class JwtService {
     private String secretKey = "5ce98d378ec88ea09ba8bcd511ef23645f04cc8e70b9134b98723a53c275bbc5";
     private long jwtExpiration = 10800000;  // 3 hours in milliseconds
 
-    public String generateToken(String username, String role) {
+    //TODO token purposes enum
+    public String generateToken(String username, String role, String token_type) {
         var claims = new HashMap<String, Object>();
         claims.put("role", role); //public claims
+        claims.put("token_type", token_type);
+
+        //in case of registration i want a small time window
+        long expiration = jwtExpiration;
+        if ("registration".equals(token_type)) {
+            expiration = 15 * 60 * 1000; // 15 minutes
+        }
+
         return Jwts
                 .builder()
                 .setIssuer("self") // todo
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -47,6 +56,11 @@ public class JwtService {
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
+    }
+
+    public boolean isRegistrationToken(String token) {
+        Object type = extractClaim(token, c -> c.get("token_type"));
+        return "registration".equals(type != null ? type.toString() : null);
     }
 
     private boolean isTokenExpired(String token) {

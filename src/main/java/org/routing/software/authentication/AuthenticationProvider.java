@@ -21,7 +21,8 @@ public class AuthenticationProvider {
     }
 
     public boolean confirmRegistration(String token) {
-        UserJpo userJpo = userService.isUserConfirmationTokenValid(token);
+        boolean isUserConfirmationTokenValid = false;
+        return isUserConfirmationTokenValid = userService.isUserConfirmationTokenValid(token);
     }
 
 }

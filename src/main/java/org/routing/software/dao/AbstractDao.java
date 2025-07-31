@@ -47,7 +47,7 @@ public abstract class AbstractDao<T extends IdentifiableEntity> implements IGene
         if (Optional.of(t).isPresent()) {
             T entity = t.get();
             if (entity instanceof AbstractEntity) {
-                ((AbstractEntity) entity).setDeleted(true);
+                ((AbstractEntity) entity).setActive(true);
                 update(entity);
             } else {
                 //TODO LOGGER

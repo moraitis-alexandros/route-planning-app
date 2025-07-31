@@ -13,6 +13,7 @@ import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import jakarta.ws.rs.ext.Provider;
 import org.routing.software.dtos.UserReadOnlyDto;
+import org.routing.software.mappers.UserMapper;
 import org.routing.software.model.User;
 import org.routing.software.security.CustomSecurityContext;
 import org.routing.software.security.JwtService;
@@ -33,6 +34,8 @@ public class JwtAuthenticationFilter implements ContainerResponseFilter {
     @Context //same as inject but puts jakarta injection. ie it inject our implementation CustomSecurityContext
     SecurityContext securityContext; //in order to put the user that will be found by DAO and validated through jwtService
 
+    @Inject
+    UserMapper userMapper;
 
     @Override
     public void filter(ContainerRequestContext containerRequestContext, ContainerResponseContext containerResponseContext) throws IOException {
@@ -57,10 +60,9 @@ public class JwtAuthenticationFilter implements ContainerResponseFilter {
         try {
             String username = jwtService.extractSubject(token);
 
-            UserReadOnlyDto userReadOnlyDto = userService.getUserByUsername(username).orElse(null);
-            User user = null; //TODO convert userReadOnlyDto to User
+            User user = userService.getUserByUsername(username).orElse(null);
 
-            if (user != null && jwtService.isTokenValid(token, user)) {
+            if (user != null && jwtService.isTokenValid(token, user) && !jwtService.isRegistrationToken(token)) {
                 containerRequestContext.setSecurityContext(new CustomSecurityContext(user));
             } else {
                 //TODO LOGGER

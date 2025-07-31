@@ -16,6 +16,8 @@ import org.routing.software.dtos.UserRegisterDto;
 import org.routing.software.exceptions.exceptionCategories.EntityAlreadyExistsException;
 import org.routing.software.exceptions.exceptionCategories.EntityInvalidArgumentException;
 import org.routing.software.exceptions.exceptionCategories.EntityNotFoundException;
+import org.routing.software.mappers.UserMapper;
+import org.routing.software.model.User;
 import org.routing.software.security.JwtService;
 import org.routing.software.service.IUserService;
 import org.routing.software.validator.UserRegisterValidator;
@@ -39,6 +41,7 @@ public class AuthRestController {
     private final JwtService jwtService; //it belongs to onCOnstructor due to its final - also applies in nonull
     private final ValidatorUtil validatorUtil;
     private final UserRegisterValidator userRegisterValidator;
+    private final UserMapper userMapper;
 
     @POST
     @Path("/register")
@@ -59,16 +62,18 @@ public class AuthRestController {
             throw new EntityInvalidArgumentException("User", otherErrors.toString()); //the AppExceptionMapper will forward the exception.
         }
 
-        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.registerUser(userRegisterDto);
-        if (!userReadOnlyDtoOptional.isPresent()) {
+        Optional<User> userOptional = userService.registerUser(userRegisterDto);
+
+        if (userOptional.isEmpty()) {
             throw new EntityAlreadyExistsException("User", "The email provided already exists."); //the AppExceptionMapper will forward the exception.
         }
+
+        UserReadOnlyDto userReadOnlyDto = userMapper.userToUserDto(userOptional.get()); //we assured above that optional is not empty
         return Response.created(uriInfo.getAbsolutePathBuilder()
-                        .path(userReadOnlyDtoOptional
-                                .get()
+                        .path(userReadOnlyDto
                                 .getUuid()) //we forward the uuid not id for security reasons
                         .build())
-                .entity(userReadOnlyDtoOptional.get()).build();
+                .entity(userReadOnlyDto).build();
     }
 
     //Principal is logged in user
@@ -86,9 +91,10 @@ public class AuthRestController {
         }
 
         //get user, we already checked that user exists (above).
-        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.getUserByUsername(userLoginDTO.getUsername());
-        String role = userReadOnlyDtoOptional.get().getRole();
-        String token = jwtService.generateToken(userLoginDTO.getUsername(), role);
+        Optional<User> userOptional = userService.getUserByUsername(userLoginDTO.getUsername());
+
+        String role = userOptional.get().getRoleType().name();
+        String token = jwtService.generateToken(userOptional.get().getUsername(), role, "login");
         AuthenticationResponseDto responseDTO = new AuthenticationResponseDto(token);
         return Response.status(Response.Status.OK).entity(responseDTO).build();
     }
@@ -100,22 +106,27 @@ public class AuthRestController {
     @Produces(MediaType.APPLICATION_JSON)
     public Response confirm(@PathParam("confirmationToken") String confirmationToken) throws EntityNotFoundException {
 
-        boolean isUserValid = authenticationProvider.confirmRegistration(confirmationToken);
-        jwtService.isTokenValid()
+        boolean isConfirmRegistrationValid = authenticationProvider.confirmRegistration(confirmationToken);
 
-        //check if user exists
-        if (!isUserValid) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+        //check if the user with that token is found && the token is valid (from jwt service)
+        if (!isConfirmRegistrationValid) {
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        //get user, we already checked that user exists (above).
-        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.getUserByUsername(userLoginDTO.getUsername());
-        String role = userReadOnlyDtoOptional.get().getRole();
-        String token = jwtService.generateToken(userLoginDTO.getUsername(), role);
-        AuthenticationResponseDto responseDTO = new AuthenticationResponseDto(token);
-        return Response.status(Response.Status.OK).entity(responseDTO).build();
-    }
+        boolean isRegistrationToken = jwtService.isRegistrationToken(confirmationToken);
+        //if it is registration token, then set user attribute active into true
 
+        userService.
+
+        //get user, we already checked that user exists (above).
+//        Optional<UserReadOnlyDto> userReadOnlyDtoOptional = userService.getUserByUsername(userLoginDTO.getUsername());
+//        String role = userReadOnlyDtoOptional.get().getRole();
+//        String token = jwtService.generateToken(userLoginDTO.getUsername(), role);
+//        AuthenticationResponseDto responseDTO = new AuthenticationResponseDto(token);
+//        return Response.status(Response.Status.OK).entity(responseDTO).build();
+//    }
+
+    }
 
 
 }

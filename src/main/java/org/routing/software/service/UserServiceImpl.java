@@ -7,6 +7,10 @@ import org.routing.software.dao.IUserDao;
 import org.routing.software.dtos.UserReadOnlyDto;
 import org.routing.software.dtos.UserRegisterDto;
 import org.routing.software.jpos.UserJpo;
+import org.routing.software.mappers.UserMapper;
+import org.routing.software.model.User;
+import org.routing.software.security.JwtService;
+
 import java.util.Optional;
 
 @ApplicationScoped
@@ -14,6 +18,12 @@ public class UserServiceImpl implements IUserService {
 
     @Inject
     IUserDao userDao;
+
+    @Inject
+    JwtService jwtService;
+
+    @Inject
+    UserMapper userMapper;
 
     @Override
     public Optional<UserReadOnlyDto> registerUser(UserRegisterDto userRegisterDto) {
@@ -34,18 +44,15 @@ public class UserServiceImpl implements IUserService {
 
 
     @Override
-    public Optional<UserReadOnlyDto> getUserByUsername(String userName) {
+    public Optional<User> getUserByUsername(String username) {
 
-        Optional<UserJpo> userJpo = userDao.getByUsername(userName);
-
+        Optional<UserJpo> userJpo = userDao.getByUsername(username);
+        User user = new User();
         if (userJpo.isPresent()) {
-            //converter
-//            User user = convert (userJpo);
-//            UserReadOnlyDto userReadOnlyDto = convert user
-
+            user = userMapper.userJpoToUser(userJpo.get());
         }
+        return Optional.of(user);
 
-        return null;
     }
 
     @Override
@@ -64,9 +71,9 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public UserJpo isUserConfirmationTokenValid(String token) {
+    public boolean isUserConfirmationTokenValid(String token) {
         UserJpo userJpo = userDao.userConfirmationTokenExists(token);
-        return userJpo;
-        //TODO mapper
+        User user = userMapper.userJpoToUser(userJpo);
+        return jwtService.isTokenValid(token, user);
     }
 }
